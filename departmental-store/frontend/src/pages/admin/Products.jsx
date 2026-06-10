@@ -109,7 +109,7 @@ export default function AdminProducts() {
         <EmptyState
           icon={Package}
           title="No products yet"
-          description="Add your first product to start selling on HariBasket."
+          description="Add your first product to start selling on FreshBasket."
           action={
             <Button onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4" /> Add Product

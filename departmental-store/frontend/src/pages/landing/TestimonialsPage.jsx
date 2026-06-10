@@ -2,7 +2,7 @@ import { Card } from '../../components/ui/Card';
 import { Star } from 'lucide-react';
 
 const testimonials = [
-  { name: 'Priya Sharma', text: 'Fresh vegetables every morning. HariBasket has become our go-to store.', rating: 5 },
+  { name: 'Priya Sharma', text: 'Fresh vegetables every morning. FreshBasket has become our go-to store.', rating: 5 },
   { name: 'Rajesh Kumar', text: 'Great quality and fast delivery. The customer panel is very easy to use.', rating: 5 },
   { name: 'Anita Patel', text: 'Love the today\'s specials section. Always something fresh and seasonal.', rating: 5 },
 ];

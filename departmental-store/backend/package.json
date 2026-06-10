@@ -1,7 +1,7 @@
 {
-  "name": "haribasket-backend",
+  "name": "freshbasket-backend",
   "version": "1.0.0",
-  "description": "HariBasket — Departmental Store API",
+  "description": "FreshBasket — Departmental Store API",
   "main": "src/server.js",
   "type": "module",
   "scripts": {

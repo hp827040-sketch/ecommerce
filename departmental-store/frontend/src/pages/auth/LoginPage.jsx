@@ -3,15 +3,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Leaf } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { Card } from '../../components/ui/Card';
+import { AuthLayout, AuthError } from '../../components/auth/AuthLayout';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 
 const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().email('Please enter a valid email'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 export default function LoginPage() {
@@ -35,26 +35,41 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-900/20 via-slate-950 to-slate-950" />
-      <Card className="relative w-full max-w-md">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <div className="rounded-xl bg-gradient-to-br from-primary-500 to-gold-500 p-2">
-            <Leaf className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-bold">HariBasket</span>
-        </div>
-        <h1 className="text-center text-2xl font-bold">Welcome Back</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-          <Input label="Email" type="email" error={errors.email?.message} {...register('email')} />
-          <Input label="Password" type="password" error={errors.password?.message} {...register('password')} />
-          {error && <p className="text-sm text-red-400">{error}</p>}
-          <Button type="submit" loading={loading} className="w-full">Sign In</Button>
-        </form>
-        <p className="mt-4 text-center text-sm text-slate-400">
-          Don't have an account? <Link to="/register" className="text-primary-400 hover:underline">Register</Link>
-        </p>
-      </Card>
-    </div>
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Sign in to track orders, manage your cart, and shop today's fresh picks."
+      footer={
+        <>
+          Don&apos;t have an account?{' '}
+          <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-700 hover:underline">
+            Create one free
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <Input
+          label="Email address"
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          error={errors.email?.message}
+          {...register('email')}
+        />
+        <Input
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="Enter your password"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <AuthError message={error} />
+        <Button type="submit" loading={loading} className="w-full py-3">
+          Sign In
+          {!loading && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

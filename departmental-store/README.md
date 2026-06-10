@@ -1,4 +1,4 @@
-# HariBasket 🥬
+# FreshBasket 🥬
 
 Premium local departmental store & fresh vegetable delivery platform.
 
@@ -12,7 +12,7 @@ Premium local departmental store & fresh vegetable delivery platform.
 
 ### 1. Database
 
-Create a MySQL database named `haribasket`.
+Create a MySQL database named `freshbasket`.
 
 ### 2. Backend
 
@@ -43,8 +43,8 @@ App runs at `http://localhost:5173`
 
 | Role     | Email                    | Password     |
 |----------|--------------------------|--------------|
-| Admin    | admin@haribasket.com     | admin123     |
-| Customer | customer@haribasket.com  | customer123  |
+| Admin    | admin@freshbasket.com     | admin123     |
+| Customer | customer@freshbasket.com  | customer123  |
 
 ## Documentation
 

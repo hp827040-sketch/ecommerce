@@ -4,11 +4,18 @@ import { categoryService } from '../../services/categoryService';
 import { PageHeader } from '../../components/admin/PageHeader';
 import { EmptyState } from '../../components/admin/EmptyState';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Plus, Trash2, Tags } from 'lucide-react';
+import { Input, Select } from '../../components/ui/Input';
+import { Plus, Pencil, Trash2, Tags } from 'lucide-react';
+
+const STATUS_OPTIONS = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'INACTIVE', label: 'Inactive' },
+];
 
 export default function AdminCategories() {
+  const [editId, setEditId] = useState(null);
   const [name, setName] = useState('');
+  const [status, setStatus] = useState('ACTIVE');
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -16,18 +23,35 @@ export default function AdminCategories() {
     queryFn: () => categoryService.getAll(),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (payload) => categoryService.create(payload),
+  const resetForm = () => {
+    setEditId(null);
+    setName('');
+    setStatus('ACTIVE');
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: (payload) => editId
+      ? categoryService.update(editId, payload)
+      : categoryService.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      setName('');
+      resetForm();
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => categoryService.remove(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      if (editId) resetForm();
+    },
   });
+
+  const handleEdit = (category) => {
+    setEditId(category.id);
+    setName(category.name);
+    setStatus(category.status || 'ACTIVE');
+  };
 
   const categories = data?.data || [];
 
@@ -40,20 +64,48 @@ export default function AdminCategories() {
 
       <div className="admin-card p-5">
         <form
-          onSubmit={(e) => { e.preventDefault(); if (name.trim()) createMutation.mutate({ name: name.trim() }); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!name.trim()) return;
+            const payload = { name: name.trim() };
+            if (editId) payload.status = status;
+            saveMutation.mutate(payload);
+          }}
           className="flex flex-col gap-3 sm:flex-row sm:items-end"
         >
           <Input
             className="flex-1"
-            label="New category"
+            label={editId ? 'Rename category' : 'New category'}
             placeholder="e.g. Vegetables, Fruits, Dairy"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <Button type="submit" loading={createMutation.isPending} className="sm:mb-0">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add Category
-          </Button>
+          {editId && (
+            <Select
+              className="sm:w-40"
+              label="Status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              options={STATUS_OPTIONS}
+            />
+          )}
+          <div className="flex gap-2 sm:mb-0">
+            <Button type="submit" loading={saveMutation.isPending}>
+              {editId ? (
+                <>Save Changes</>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Add Category
+                </>
+              )}
+            </Button>
+            {editId && (
+              <Button type="button" variant="ghost" onClick={resetForm}>
+                Cancel
+              </Button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -72,7 +124,12 @@ export default function AdminCategories() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categories.map((c) => (
-            <div key={c.id} className="admin-card group p-5 transition hover:shadow-md">
+            <div
+              key={c.id}
+              className={`admin-card group p-5 transition hover:shadow-md ${
+                editId === c.id ? 'ring-2 ring-primary-500 ring-offset-2' : ''
+              }`}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
@@ -83,13 +140,30 @@ export default function AdminCategories() {
                     <p className="text-sm text-slate-500">{c._count?.products || 0} products</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => deleteMutation.mutate(c.id)}
-                  className="rounded-lg p-2 text-slate-400 opacity-0 transition group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
-                  aria-label={`Delete ${c.name}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex opacity-0 transition group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(c)}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-primary-50 hover:text-primary-600"
+                    aria-label={`Rename ${c.name}`}
+                    title="Rename"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Delete "${c.name}"? This cannot be undone.`)) {
+                        deleteMutation.mutate(c.id);
+                      }
+                    }}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                    aria-label={`Delete ${c.name}`}
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
               <span className={`mt-4 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
                 c.status === 'ACTIVE' ? 'bg-primary-50 text-primary-700' : 'bg-slate-100 text-slate-500'

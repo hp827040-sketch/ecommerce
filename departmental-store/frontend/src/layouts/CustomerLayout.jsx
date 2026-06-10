@@ -84,7 +84,7 @@ export const CustomerLayout = ({ navGroups, title }) => {
               </div>
               <div>
                 <span className="customer-display block text-lg font-bold leading-tight text-slate-900">
-                  Hari<span className="text-primary-600">Basket</span>
+                  Fresh<span className="text-primary-600">Basket</span>
                 </span>
                 <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   <Sparkles className="h-3 w-3 text-primary-500" aria-hidden="true" />

@@ -112,14 +112,146 @@ export const getOrderById = async (id, userId = null) => {
   return order;
 };
 
-export const updateOrderStatus = async (id, status) => {
-  await getOrderById(id);
+const adjustStockForStatusChange = async (tx, order, nextStatus) => {
+  if (nextStatus === order.status) return;
 
-  return prisma.order.update({
-    where: { id },
-    data: { status },
-    include: orderInclude,
+  if (nextStatus === 'CANCELLED' && order.status !== 'CANCELLED') {
+    for (const item of order.items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+    return;
+  }
+
+  if (order.status === 'CANCELLED' && nextStatus !== 'CANCELLED') {
+    for (const item of order.items) {
+      const product = await tx.product.findUnique({ where: { id: item.productId } });
+      if (product.stock < item.quantity) {
+        const err = new Error(`Insufficient stock for ${product.name}`);
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+    for (const item of order.items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+    }
+  }
+};
+
+export const createAdminOrder = async (data) => {
+  const user = await prisma.user.findUnique({ where: { id: data.userId } });
+  if (!user) {
+    const err = new Error('Customer not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!data.items?.length) {
+    const err = new Error('Order must include at least one item');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const productIds = data.items.map((item) => item.productId);
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds } },
   });
+
+  if (products.length !== new Set(productIds).size) {
+    const err = new Error('One or more products not found');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  let total = 0;
+
+  for (const item of data.items) {
+    const product = productMap.get(item.productId);
+    if (product.stock < item.quantity) {
+      const err = new Error(`Insufficient stock for ${product.name}`);
+      err.statusCode = 400;
+      throw err;
+    }
+    total += Number(product.price) * item.quantity;
+  }
+
+  const status = data.status || 'PENDING';
+  const shouldReserveStock = status !== 'CANCELLED';
+
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.create({
+      data: {
+        userId: data.userId,
+        total,
+        status,
+        paymentMethod: data.paymentMethod || 'COD',
+        address: data.address,
+        phone: data.phone,
+        notes: data.notes,
+        items: {
+          create: data.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: productMap.get(item.productId).price,
+          })),
+        },
+      },
+      include: orderInclude,
+    });
+
+    if (shouldReserveStock) {
+      for (const item of data.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
+    }
+
+    await tx.user.update({
+      where: { id: data.userId },
+      data: {
+        ...(data.name && { name: data.name }),
+        phone: data.phone,
+        address: data.address,
+      },
+    });
+
+    return order;
+  });
+};
+
+export const updateOrder = async (id, data) => {
+  const order = await getOrderById(id);
+  const { status, ...rest } = data;
+
+  return prisma.$transaction(async (tx) => {
+    if (status) {
+      await adjustStockForStatusChange(tx, order, status);
+    }
+
+    return tx.order.update({
+      where: { id },
+      data: {
+        ...(rest.phone && { phone: rest.phone }),
+        ...(rest.address && { address: rest.address }),
+        ...(rest.notes !== undefined && { notes: rest.notes }),
+        ...(rest.paymentMethod && { paymentMethod: rest.paymentMethod }),
+        ...(status && { status }),
+      },
+      include: orderInclude,
+    });
+  });
+};
+
+export const updateOrderStatus = async (id, status) => {
+  return updateOrder(id, { status });
 };
 
 export const deleteOrder = async (id) => {

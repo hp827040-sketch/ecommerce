@@ -38,7 +38,7 @@ const features = [
 ];
 
 const reviews = [
-  { name: 'Priya Sharma', location: 'Koramangala', text: 'Vegetables arrive crisp every single morning. HariBasket is our family\'s daily ritual now.', rating: 5 },
+  { name: 'Priya Sharma', location: 'Koramangala', text: 'Vegetables arrive crisp every single morning. FreshBasket is our family\'s daily ritual now.', rating: 5 },
   { name: 'Rajesh Kumar', location: 'Indiranagar', text: 'The ordering panel is effortless. Quality beats every supermarket near us.', rating: 5 },
   { name: 'Anita Patel', location: 'Whitefield', text: 'Today\'s specials are always seasonal and fairly priced. Highly recommend!', rating: 5 },
 ];
@@ -99,7 +99,7 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-600">
-              HariBasket brings farm-fresh vegetables and daily essentials to your door —
+              FreshBasket brings farm-fresh vegetables and daily essentials to your door —
               curated quality, transparent pricing, and a shopping experience you&apos;ll love.
             </p>
 
@@ -322,14 +322,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Why HariBasket */}
+      {/* Why FreshBasket */}
       <section className="landing-section" aria-labelledby="features-heading">
         <SectionHeader
           eyebrow="Why choose us"
           title="A premium experience, every delivery"
           description="We combine local sourcing with modern convenience — so you spend less time shopping and more time living."
         />
-        <div id="features-heading" className="sr-only">Why HariBasket</div>
+        <div id="features-heading" className="sr-only">Why FreshBasket</div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f, i) => (
@@ -357,7 +357,7 @@ export default function HomePage() {
           <SectionHeader
             eyebrow="Customer love"
             title="Trusted by thousands nearby"
-            description="Real reviews from real neighbours — see why HariBasket is the go-to for fresh groceries."
+            description="Real reviews from real neighbours — see why FreshBasket is the go-to for fresh groceries."
             actionLabel="Read more reviews"
             actionTo="/testimonials"
           />

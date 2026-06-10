@@ -1,4 +1,4 @@
-// HariBasket — Departmental Store & Fresh Vegetable Delivery
+// FreshBasket — Departmental Store & Fresh Vegetable Delivery
 // Prisma Schema — MySQL
 
 generator client {

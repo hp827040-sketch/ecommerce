@@ -8,7 +8,7 @@ export default function ContactPage() {
       <div className="mt-8 grid gap-6 md:grid-cols-3">
         {[
           { icon: Phone, label: 'Phone', value: '+91 98765 43210' },
-          { icon: Mail, label: 'Email', value: 'hello@haribasket.com' },
+          { icon: Mail, label: 'Email', value: 'hello@freshbasket.com' },
           { icon: MapPin, label: 'Address', value: 'Main Market, Your City' },
         ].map((c, i) => (
           <Card key={c.label} delay={i * 0.1}>

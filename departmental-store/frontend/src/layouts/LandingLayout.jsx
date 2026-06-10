@@ -58,12 +58,12 @@ export const LandingLayout = () => {
         } border-b border-slate-200/60`}
       >
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 lg:px-8">
-          <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="HariBasket home">
+          <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="FreshBasket home">
             <div className="rounded-xl bg-gradient-to-br from-primary-500 to-gold-500 p-2 shadow-md shadow-primary-500/20">
               <Leaf className="h-5 w-5 text-white" aria-hidden="true" />
             </div>
             <span className="landing-display text-xl font-bold text-slate-900">
-              Hari<span className="text-gold-600">Basket</span>
+              Fresh<span className="text-gold-600">Basket</span>
             </span>
           </Link>
 
@@ -167,7 +167,7 @@ export const LandingLayout = () => {
                   <Leaf className="h-5 w-5 text-white" aria-hidden="true" />
                 </div>
                 <span className="landing-display text-xl font-bold text-slate-900">
-                  Hari<span className="text-gold-600">Basket</span>
+                  Fresh<span className="text-gold-600">Basket</span>
                 </span>
               </Link>
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">
@@ -175,7 +175,7 @@ export const LandingLayout = () => {
               </p>
               <div className="mt-5 space-y-2 text-sm text-slate-600">
                 <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary-600" aria-hidden="true" /> +91 98765 43210</p>
-                <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary-600" aria-hidden="true" /> hello@haribasket.com</p>
+                <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary-600" aria-hidden="true" /> hello@freshbasket.com</p>
                 <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary-600" aria-hidden="true" /> Main Market, Your City</p>
               </div>
             </div>
@@ -198,7 +198,7 @@ export const LandingLayout = () => {
 
           <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-100 pt-8 sm:flex-row">
             <p className="text-sm text-slate-500">
-              © {new Date().getFullYear()} HariBasket. All rights reserved.
+              © {new Date().getFullYear()} FreshBasket. All rights reserved.
             </p>
             <p className="text-xs text-slate-400">
               Farm fresh · Same-day delivery · Quality guaranteed

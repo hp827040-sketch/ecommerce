@@ -6,18 +6,30 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronLeft,
   ExternalLink,
   Bell,
   ShieldCheck,
+  PanelLeftClose,
+  PanelLeft,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+
+const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
 
 const isNavActive = (pathname, to) =>
   pathname === to || (to !== '/admin' && pathname.startsWith(to));
 
 export const AdminLayout = ({ navGroups, title }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,6 +44,16 @@ export const AdminLayout = ({ navGroups, title }) => {
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(sidebarCollapsed));
+    } catch {
+      // ignore storage errors
+    }
+  }, [sidebarCollapsed]);
+
+  const toggleSidebarCollapsed = () => setSidebarCollapsed((prev) => !prev);
 
   const handleLogout = () => {
     logout();
@@ -49,45 +71,83 @@ export const AdminLayout = ({ navGroups, title }) => {
     <div className="admin-theme flex min-h-screen">
       {sidebarOpen && (
         <button
-          className="fixed inset-0 z-30 bg-slate-950/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-label="Close sidebar"
         />
       )}
 
       <aside
-        className={`admin-sidebar fixed inset-y-0 left-0 z-40 flex w-60 flex-col transition-transform duration-300 ease-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`admin-sidebar fixed inset-y-0 left-0 z-40 flex flex-col transition-[width,transform] duration-300 ease-out lg:translate-x-0 ${
+          sidebarCollapsed ? 'w-[4.5rem]' : 'w-[17.5rem]'
+        } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div className="relative flex h-full flex-col">
-          <div className="admin-sidebar-glow pointer-events-none absolute inset-0" aria-hidden="true" />
+        <div className="relative flex h-full flex-col overflow-hidden">
+          <div className="admin-sidebar-accent pointer-events-none absolute inset-y-0 left-0 w-1" aria-hidden="true" />
 
           {/* Brand */}
-          <div className="relative shrink-0 px-4 pb-4 pt-5">
-            <Link to="/" className="group flex items-center gap-3 rounded-xl p-2 transition hover:bg-white/[0.04]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 shadow-lg shadow-primary-900/40 ring-1 ring-white/10 transition group-hover:bg-primary-400">
+          <div
+            className={`relative shrink-0 border-b border-slate-200/80 ${
+              sidebarCollapsed ? 'flex justify-center px-2 py-4' : 'p-5'
+            }`}
+          >
+            <Link
+              to="/"
+              className={`group ${sidebarCollapsed ? 'flex' : 'flex items-center gap-3'}`}
+              title={sidebarCollapsed ? 'FreshBasket Admin' : undefined}
+            >
+              <div className="rounded-2xl bg-gradient-to-br from-primary-500 via-primary-400 to-emerald-400 p-2.5 shadow-lg shadow-primary-500/30 transition group-hover:scale-105">
                 <Leaf className="h-5 w-5 text-white" aria-hidden="true" />
               </div>
-              <div className="min-w-0">
-                <span className="admin-display block truncate text-base font-bold text-white">
-                  Hari<span className="text-primary-400">Basket</span>
-                </span>
-                <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-slate-500">
-                  Admin Panel
-                </span>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0">
+                  <span className="admin-display block truncate text-lg font-bold leading-tight text-slate-900">
+                    Fresh<span className="text-primary-600">Basket</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <ShieldCheck className="h-3 w-3 text-primary-500" aria-hidden="true" />
+                    Admin Panel
+                  </span>
+                </div>
+              )}
             </Link>
           </div>
 
+          {/* Collapse toggle — desktop */}
+          <div className={`hidden shrink-0 border-b border-slate-200/80 lg:block ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2'}`}>
+            <button
+              type="button"
+              onClick={toggleSidebarCollapsed}
+              className="admin-sidebar-toggle w-full"
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <>
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  <span>Collapse</span>
+                </>
+              )}
+            </button>
+          </div>
+
           {/* Navigation */}
-          <div className="relative min-h-0 flex-1 overflow-y-auto px-3 pb-3 scrollbar-hide">
-            <nav className="space-y-5" aria-label="Admin navigation">
+          <div
+            className={`relative min-h-0 flex-1 overflow-y-auto py-4 scrollbar-hide ${
+              sidebarCollapsed ? 'px-2' : 'px-3'
+            }`}
+          >
+            <nav className={sidebarCollapsed ? 'space-y-3' : 'space-y-6'} aria-label="Admin navigation">
               {navGroups.map((group, groupIndex) => (
                 <div key={group.label}>
-                  {groupIndex > 0 && <div className="admin-nav-divider mb-4" />}
-                  <p className="admin-nav-section mb-1.5 px-3">{group.label}</p>
-                  <ul className="space-y-0.5">
+                  {sidebarCollapsed ? (
+                    groupIndex > 0 && <div className="admin-nav-group-divider" />
+                  ) : (
+                    <p className="admin-nav-section mb-2 px-3">{group.label}</p>
+                  )}
+                  <ul className="space-y-1">
                     {group.items.map((item) => {
                       const isActive = isNavActive(location.pathname, item.to);
                       const Icon = item.icon;
@@ -95,17 +155,40 @@ export const AdminLayout = ({ navGroups, title }) => {
                         <li key={item.to}>
                           <Link
                             to={item.to}
-                            className={`admin-nav-link ${isActive ? 'admin-nav-link-active' : ''}`}
+                            title={sidebarCollapsed ? item.label : undefined}
+                            className={`admin-nav-link group ${isActive ? 'admin-nav-link-active' : ''} ${
+                              sidebarCollapsed ? 'admin-nav-link-collapsed' : ''
+                            }`}
                           >
-                            {isActive && (
+                            {isActive && !sidebarCollapsed && (
                               <motion.span
-                                layoutId="admin-nav-rail"
-                                className="admin-nav-rail"
-                                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                                layoutId="admin-nav-indicator"
+                                className="admin-nav-indicator"
+                                transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                               />
                             )}
-                            <Icon className="admin-nav-link-icon" aria-hidden="true" />
-                            <span className="truncate">{item.label}</span>
+                            <span className={`admin-nav-icon ${isActive ? 'admin-nav-icon-active' : ''}`}>
+                              <Icon className="h-[1.125rem] w-[1.125rem]" aria-hidden="true" />
+                            </span>
+                            {!sidebarCollapsed && (
+                              <>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-medium">{item.label}</span>
+                                  {item.description && (
+                                    <span
+                                      className={`block truncate text-[11px] ${
+                                        isActive ? 'text-primary-700/80' : 'text-slate-400 group-hover:text-slate-500'
+                                      }`}
+                                    >
+                                      {item.description}
+                                    </span>
+                                  )}
+                                </span>
+                                {isActive && (
+                                  <ChevronRight className="relative z-10 h-4 w-4 shrink-0 text-primary-600/70" aria-hidden="true" />
+                                )}
+                              </>
+                            )}
                           </Link>
                         </li>
                       );
@@ -117,38 +200,64 @@ export const AdminLayout = ({ navGroups, title }) => {
           </div>
 
           {/* Footer */}
-          <div className="relative shrink-0 border-t border-white/[0.06] p-3">
-            <div className="admin-user-card flex items-center gap-3 rounded-xl px-3 py-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-xs font-bold text-slate-900">
+          <div
+            className={`relative shrink-0 border-t border-slate-200/80 ${
+              sidebarCollapsed ? 'p-2' : 'p-4'
+            }`}
+          >
+            <div
+              className={`admin-user-card mb-3 flex items-center rounded-2xl ${
+                sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-3'
+              }`}
+              title={sidebarCollapsed ? user?.name : undefined}
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-emerald-500 text-sm font-bold text-white shadow-md shadow-primary-500/25">
                 {initials}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">{user?.name}</p>
-                <p className="flex items-center gap-1 truncate text-[11px] text-slate-500">
-                  <ShieldCheck className="h-3 w-3 shrink-0 text-primary-400" aria-hidden="true" />
-                  Administrator
-                </p>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-900">{user?.name}</p>
+                  <p className="flex items-center gap-1 truncate text-xs text-slate-500">
+                    <ShieldCheck className="h-3 w-3 shrink-0 text-primary-500" aria-hidden="true" />
+                    Administrator
+                  </p>
+                </div>
+              )}
             </div>
-            <div className="mt-2 flex gap-1.5">
-              <Link to="/" className="admin-sidebar-action flex-1">
+            <div className={sidebarCollapsed ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2'}>
+              <Link
+                to="/"
+                className={`admin-sidebar-action admin-sidebar-action-primary ${
+                  sidebarCollapsed ? 'admin-sidebar-action-icon' : ''
+                }`}
+                title="View Store"
+                aria-label="View Store"
+              >
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                Store
+                {!sidebarCollapsed && 'Store'}
               </Link>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="admin-sidebar-action admin-sidebar-action-danger"
+                className={`admin-sidebar-action admin-sidebar-action-danger ${
+                  sidebarCollapsed ? 'admin-sidebar-action-icon' : ''
+                }`}
+                title="Logout"
                 aria-label="Logout"
               >
                 <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+                {!sidebarCollapsed && 'Logout'}
               </button>
             </div>
           </div>
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col lg:ml-60">
+      <div
+        className={`flex min-h-screen flex-1 flex-col transition-[margin] duration-300 ease-out ${
+          sidebarCollapsed ? 'lg:ml-[4.5rem]' : 'lg:ml-[17.5rem]'
+        }`}
+      >
         <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl lg:px-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -158,6 +267,18 @@ export const AdminLayout = ({ navGroups, title }) => {
                 aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
               >
                 {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+              <button
+                type="button"
+                className="hidden rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 lg:flex"
+                onClick={toggleSidebarCollapsed}
+                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                {sidebarCollapsed ? (
+                  <PanelLeft className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
+                )}
               </button>
               <div>
                 <nav className="mb-0.5 flex items-center gap-1 text-xs text-slate-500" aria-label="Breadcrumb">

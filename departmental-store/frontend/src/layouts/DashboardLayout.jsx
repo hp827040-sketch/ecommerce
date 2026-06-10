@@ -29,7 +29,7 @@ export const DashboardLayout = ({ navItems, title, accent = 'primary' }) => {
             <div className="rounded-xl bg-gradient-to-br from-primary-500 to-gold-500 p-2">
               <Leaf className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold">HariBasket</span>
+            <span className="text-lg font-bold">FreshBasket</span>
           </Link>
 
           <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</p>

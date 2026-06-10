@@ -22,7 +22,7 @@ router.use('/admin', adminRoutes);
 router.use('/customer', customerRoutes);
 
 router.get('/health', (_req, res) => {
-  res.json({ success: true, message: 'HariBasket API is running' });
+  res.json({ success: true, message: 'FreshBasket API is running' });
 });
 
 export default router;

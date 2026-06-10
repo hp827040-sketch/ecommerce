@@ -26,5 +26,5 @@ app.use(notFound);
 app.use(errorHandler);
 
 app.listen(env.port, () => {
-  console.log(`🥬 HariBasket API running on http://localhost:${env.port}`);
+  console.log(`🥬 FreshBasket API running on http://localhost:${env.port}`);
 });

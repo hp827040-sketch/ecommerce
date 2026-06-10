@@ -1,4 +1,4 @@
-# HariBasket — Architecture Document
+# FreshBasket — Architecture Document
 
 Premium departmental store & fresh vegetable delivery platform (MVP).
 
@@ -280,7 +280,7 @@ erDiagram
 ## 8. Admin Workflow
 
 ```
-Login (admin@haribasket.com)
+Login (admin@freshbasket.com)
     ↓
 Dashboard → View today's orders, revenue, pending count
     ↓
@@ -337,7 +337,7 @@ Profile → Update contact info & address
 
 **Run:**
 ```bash
-# Create MySQL database: haribasket
+# Create MySQL database: freshbasket
 cd backend && cp .env.example .env
 npm install && npm run db:push && npm run db:seed
 npm run dev
@@ -403,6 +403,6 @@ npm run dev
 
 | Role     | Email                  | Password  |
 |----------|------------------------|-----------|
-| Admin    | admin@haribasket.com   | admin123  |
+| Admin    | admin@freshbasket.com   | admin123  |
 
 Customers register via `/register`.

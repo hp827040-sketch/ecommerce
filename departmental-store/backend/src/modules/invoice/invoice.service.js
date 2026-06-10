@@ -27,7 +27,7 @@ const generatePdf = (order, invoiceNumber) => {
 
     doc.pipe(stream);
 
-    doc.fontSize(20).text('HariBasket', { align: 'center' });
+    doc.fontSize(20).text('FreshBasket', { align: 'center' });
     doc.fontSize(12).text('Fresh Vegetables & Departmental Store', { align: 'center' });
     doc.moveDown();
     doc.fontSize(14).text(`Invoice: ${invoiceNumber}`);

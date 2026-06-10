@@ -19,6 +19,16 @@ export const getOne = asyncHandler(async (req, res) => {
   return success(res, order, 'Order fetched');
 });
 
+export const createAdmin = asyncHandler(async (req, res) => {
+  const order = await orderService.createAdminOrder(req.body);
+  return success(res, order, 'Order created successfully', 201);
+});
+
+export const update = asyncHandler(async (req, res) => {
+  const order = await orderService.updateOrder(req.params.id, req.body);
+  return success(res, order, 'Order updated');
+});
+
 export const updateStatus = asyncHandler(async (req, res) => {
   const order = await orderService.updateOrderStatus(req.params.id, req.body.status);
   return success(res, order, 'Order status updated');
