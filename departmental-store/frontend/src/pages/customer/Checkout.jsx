@@ -22,7 +22,7 @@ export default function CustomerCheckout() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       name: user?.name || '',
@@ -61,13 +61,15 @@ export default function CustomerCheckout() {
           <Select
             label="Payment Type"
             error={errors.paymentMethod?.message}
+            value={watch('paymentMethod')}
+            onChange={(e) => setValue('paymentMethod', e.target.value, { shouldValidate: true })}
             options={[
               { value: 'COD', label: 'Cash on Delivery' },
               { value: 'UPI', label: 'UPI' },
               { value: 'CARD', label: 'Card' },
             ]}
-            {...register('paymentMethod')}
           />
+          <input type="hidden" {...register('paymentMethod')} />
           {mutation.error && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{mutation.error.message}</p>
           )}

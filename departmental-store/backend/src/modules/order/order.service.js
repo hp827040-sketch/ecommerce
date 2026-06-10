@@ -1,5 +1,7 @@
 import { prisma } from '../../config/prisma.js';
 import { clearCart } from '../cart/cart.service.js';
+import { getSellingPrice } from '../../utils/productPrice.js';
+import { applyStockChange } from '../../utils/productStatus.js';
 
 const orderInclude = {
   items: {
@@ -34,7 +36,7 @@ export const createOrder = async (userId, orderData) => {
   }
 
   const total = cart.items.reduce(
-    (sum, item) => sum + Number(item.product.price) * item.quantity,
+    (sum, item) => sum + getSellingPrice(item.product) * item.quantity,
     0
   );
 
@@ -51,7 +53,7 @@ export const createOrder = async (userId, orderData) => {
           create: cart.items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
-            price: item.product.price,
+            price: getSellingPrice(item.product),
           })),
         },
       },
@@ -59,10 +61,7 @@ export const createOrder = async (userId, orderData) => {
     });
 
     for (const item of cart.items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } },
-      });
+      await applyStockChange(tx, item.productId, -item.quantity);
     }
 
     await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
@@ -117,10 +116,7 @@ const adjustStockForStatusChange = async (tx, order, nextStatus) => {
 
   if (nextStatus === 'CANCELLED' && order.status !== 'CANCELLED') {
     for (const item of order.items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { increment: item.quantity } },
-      });
+      await applyStockChange(tx, item.productId, item.quantity);
     }
     return;
   }
@@ -135,10 +131,7 @@ const adjustStockForStatusChange = async (tx, order, nextStatus) => {
       }
     }
     for (const item of order.items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } },
-      });
+      await applyStockChange(tx, item.productId, -item.quantity);
     }
   }
 };
@@ -178,7 +171,7 @@ export const createAdminOrder = async (data) => {
       err.statusCode = 400;
       throw err;
     }
-    total += Number(product.price) * item.quantity;
+    total += getSellingPrice(product) * item.quantity;
   }
 
   const status = data.status || 'PENDING';
@@ -198,7 +191,7 @@ export const createAdminOrder = async (data) => {
           create: data.items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
-            price: productMap.get(item.productId).price,
+            price: getSellingPrice(productMap.get(item.productId)),
           })),
         },
       },
@@ -207,10 +200,7 @@ export const createAdminOrder = async (data) => {
 
     if (shouldReserveStock) {
       for (const item of data.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
+        await applyStockChange(tx, item.productId, -item.quantity);
       }
     }
 
@@ -260,10 +250,7 @@ export const deleteOrder = async (id) => {
   await prisma.$transaction(async (tx) => {
     if (order.status !== 'CANCELLED') {
       for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-        });
+        await applyStockChange(tx, item.productId, item.quantity);
       }
     }
 

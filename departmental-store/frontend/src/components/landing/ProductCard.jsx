@@ -2,11 +2,15 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, ShoppingBag } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { getSellingPrice, getListPrice, hasProductOffer } from '../../utils/productPrice';
 import { ProductImage } from './ProductImage';
 import { Button } from '../ui/Button';
 
 export const ProductCard = ({ product, index = 0, shopLink, badge }) => {
   const ctaLink = shopLink || '/register';
+  const selling = getSellingPrice(product);
+  const list = getListPrice(product);
+  const onOffer = hasProductOffer(product);
 
   return (
     <motion.article
@@ -43,7 +47,12 @@ export const ProductCard = ({ product, index = 0, shopLink, badge }) => {
         </p>
         <h3 className="mt-1 font-semibold text-slate-900 line-clamp-2">{product.name}</h3>
         <div className="mt-auto pt-3">
-          <p className="text-xl font-bold text-slate-900">{formatCurrency(product.price)}</p>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(selling)}</p>
+            {onOffer && (
+              <p className="text-sm text-slate-400 line-through">{formatCurrency(list)}</p>
+            )}
+          </div>
           {product.unit && (
             <p className="text-xs text-slate-500">per {product.unit}</p>
           )}

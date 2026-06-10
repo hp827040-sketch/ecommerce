@@ -1,4 +1,5 @@
 import { prisma } from '../../config/prisma.js';
+import { getSellingPrice } from '../../utils/productPrice.js';
 
 const cartInclude = {
   items: {
@@ -28,7 +29,7 @@ const getOrCreateCart = async (userId) => {
 
 const calculateTotals = (items) => {
   const subtotal = items.reduce((sum, item) => {
-    return sum + Number(item.product.price) * item.quantity;
+    return sum + getSellingPrice(item.product) * item.quantity;
   }, 0);
 
   return {

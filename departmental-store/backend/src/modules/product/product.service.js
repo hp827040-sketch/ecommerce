@@ -1,4 +1,5 @@
 import { prisma } from '../../config/prisma.js';
+import { deriveProductStatus } from '../../utils/productStatus.js';
 
 export const getProducts = async (filters = {}) => {
   const where = {};
@@ -41,14 +42,19 @@ export const getProductById = async (id) => {
 };
 
 export const createProduct = async (data, image) => {
+  const status = deriveProductStatus(data.stock, data.status || 'ACTIVE');
+
   return prisma.product.create({
     data: {
       name: data.name,
       description: data.description,
+      unit: data.unit || null,
       price: data.price,
+      oldPrice: data.oldPrice ?? null,
+      offerPrice: data.offerPrice ?? null,
       stock: data.stock,
       categoryId: data.categoryId,
-      status: data.status || 'ACTIVE',
+      status,
       isTodaySpecial: data.isTodaySpecial || false,
       image: image || null,
     },
@@ -57,20 +63,31 @@ export const createProduct = async (data, image) => {
 };
 
 export const updateProduct = async (id, data, image) => {
-  await getProductById(id);
+  const existing = await getProductById(id);
+  const stock = data.stock !== undefined ? data.stock : existing.stock;
+
+  const updateData = {
+    ...(data.name && { name: data.name }),
+    ...(data.description !== undefined && { description: data.description }),
+    ...(data.unit !== undefined && { unit: data.unit || null }),
+    ...(data.price !== undefined && { price: data.price }),
+    ...(data.oldPrice !== undefined && { oldPrice: data.oldPrice ?? null }),
+    ...(data.offerPrice !== undefined && { offerPrice: data.offerPrice ?? null }),
+    ...(data.stock !== undefined && { stock: data.stock }),
+    ...(data.categoryId && { categoryId: data.categoryId }),
+    ...(data.isTodaySpecial !== undefined && { isTodaySpecial: data.isTodaySpecial }),
+    ...(image && { image }),
+  };
+
+  if (data.status !== undefined) {
+    updateData.status = deriveProductStatus(stock, data.status);
+  } else if (data.stock !== undefined) {
+    updateData.status = deriveProductStatus(stock, existing.status);
+  }
 
   return prisma.product.update({
     where: { id },
-    data: {
-      ...(data.name && { name: data.name }),
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.price && { price: data.price }),
-      ...(data.stock !== undefined && { stock: data.stock }),
-      ...(data.categoryId && { categoryId: data.categoryId }),
-      ...(data.status && { status: data.status }),
-      ...(data.isTodaySpecial !== undefined && { isTodaySpecial: data.isTodaySpecial }),
-      ...(image && { image }),
-    },
+    data: updateData,
     include: { category: true },
   });
 };

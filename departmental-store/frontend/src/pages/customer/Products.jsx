@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Input';
 import { formatCurrency } from '../../utils/formatters';
+import { getSellingPrice, getListPrice, hasProductOffer } from '../../utils/productPrice';
 import { Plus, ShoppingBag } from 'lucide-react';
 
 export default function CustomerProducts() {
@@ -79,8 +80,16 @@ export default function CustomerProducts() {
                     </span>
                   )}
                 </div>
-                <p className="mt-2 text-lg font-bold text-primary-600">{formatCurrency(p.price)}</p>
-                <p className={`text-xs ${p.stock === 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                <div className="mt-2">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <p className="text-lg font-bold text-primary-600">{formatCurrency(getSellingPrice(p))}</p>
+                    {hasProductOffer(p) && (
+                      <p className="text-sm text-slate-400 line-through">{formatCurrency(getListPrice(p))}</p>
+                    )}
+                  </div>
+                  {p.unit && <p className="text-xs text-slate-500">per {p.unit}</p>}
+                </div>
+                <p className={`mt-1 text-xs ${p.stock === 0 ? 'text-red-500' : 'text-slate-400'}`}>
                   {p.stock === 0 ? 'Out of stock' : `${p.stock} in stock`}
                 </p>
                 <Button

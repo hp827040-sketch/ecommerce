@@ -4,15 +4,71 @@ import { productService } from '../../services/productService';
 import { categoryService } from '../../services/categoryService';
 import { PageHeader } from '../../components/admin/PageHeader';
 import { EmptyState } from '../../components/admin/EmptyState';
+import { ProductPriceDisplay } from '../../components/admin/ProductPriceDisplay';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { Input, Select } from '../../components/ui/Input';
-import { formatCurrency } from '../../utils/formatters';
-import { Plus, Pencil, Trash2, Package, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package } from 'lucide-react';
+
+const STATUS_OPTIONS = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'OUT_OF_STOCK', label: 'Out of Stock' },
+];
+
+const UNIT_OPTIONS = [
+  { value: '', label: 'Select unit' },
+  { value: 'kg', label: 'Kilogram (kg)' },
+  { value: 'g', label: 'Gram (g)' },
+  { value: 'piece', label: 'Piece' },
+  { value: 'dozen', label: 'Dozen' },
+  { value: 'litre', label: 'Litre' },
+  { value: 'ml', label: 'Millilitre (ml)' },
+  { value: 'pack', label: 'Pack' },
+  { value: 'bunch', label: 'Bunch' },
+];
+
+const emptyForm = {
+  name: '',
+  description: '',
+  unit: '',
+  price: '',
+  oldPrice: '',
+  offerPrice: '',
+  stock: '',
+  categoryId: '',
+  status: 'ACTIVE',
+  isTodaySpecial: false,
+};
+
+const toPayload = (form) => ({
+  name: form.name.trim(),
+  description: form.description.trim() || undefined,
+  unit: form.unit || null,
+  price: Number(form.price),
+  oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
+  offerPrice: form.offerPrice ? Number(form.offerPrice) : null,
+  stock: Number(form.stock),
+  categoryId: form.categoryId,
+  status: form.status,
+  isTodaySpecial: form.isTodaySpecial,
+});
+
+const syncStatusWithStock = (stock, status) => {
+  if (status === 'INACTIVE') return status;
+  return Number(stock) <= 0 ? 'OUT_OF_STOCK' : 'ACTIVE';
+};
+
+const handleStockChange = (form, stock) => ({
+  ...form,
+  stock,
+  status: syncStatusWithStock(stock, form.status),
+});
 
 export default function AdminProducts() {
-  const [showForm, setShowForm] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({ name: '', price: '', stock: '', categoryId: '', description: '' });
+  const [form, setForm] = useState(emptyForm);
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useQuery({
@@ -23,7 +79,20 @@ export default function AdminProducts() {
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoryService.getAll(),
+    enabled: modalOpen,
   });
+
+  const closeForm = () => {
+    setModalOpen(false);
+    setEditId(null);
+    setForm(emptyForm);
+  };
+
+  const openCreateModal = () => {
+    setEditId(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
 
   const saveMutation = useMutation({
     mutationFn: (data) => editId ? productService.update(editId, data) : productService.create(data),
@@ -38,22 +107,21 @@ export default function AdminProducts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-products'] }),
   });
 
-  const closeForm = () => {
-    setShowForm(false);
-    setEditId(null);
-    setForm({ name: '', price: '', stock: '', categoryId: '', description: '' });
-  };
-
   const handleEdit = (product) => {
     setEditId(product.id);
     setForm({
       name: product.name,
+      description: product.description || '',
+      unit: product.unit || '',
       price: product.price,
+      oldPrice: product.oldPrice ?? '',
+      offerPrice: product.offerPrice ?? '',
       stock: product.stock,
       categoryId: product.categoryId,
-      description: product.description || '',
+      status: product.status || 'ACTIVE',
+      isTodaySpecial: product.isTodaySpecial || false,
     });
-    setShowForm(true);
+    setModalOpen(true);
   };
 
   const list = products?.data || [];
@@ -62,46 +130,124 @@ export default function AdminProducts() {
     <div className="space-y-6">
       <PageHeader
         title="Products"
-        description="Manage your catalogue, pricing, and inventory levels."
+        description="Manage your catalogue, pricing, units, and today's special offers."
         action={
-          <Button onClick={() => { setShowForm(true); setEditId(null); }}>
+          <Button onClick={openCreateModal}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             Add Product
           </Button>
         }
       />
 
-      {showForm && (
-        <div className="admin-card p-6">
-          <div className="mb-5 flex items-center justify-between">
-            <h3 className="admin-display font-semibold text-slate-900">
-              {editId ? 'Edit Product' : 'New Product'}
-            </h3>
-            <button onClick={closeForm} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Close form">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <form
-            onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }}
-            className="grid gap-4 sm:grid-cols-2"
-          >
-            <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-            <Input label="Price (₹)" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
-            <Input label="Stock" type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} required />
-            <Select
-              label="Category"
-              value={form.categoryId}
-              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-              options={(categories?.data || []).map((c) => ({ value: c.id, label: c.name }))}
+      <Modal
+        open={modalOpen}
+        onClose={closeForm}
+        title={editId ? 'Edit Product' : 'New Product'}
+        size="lg"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveMutation.mutate(toPayload(form));
+          }}
+          className="grid gap-4 sm:grid-cols-2"
+        >
+          <Input
+            className="sm:col-span-2"
+            label="Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+          />
+          <Select
+            label="Category"
+            value={form.categoryId}
+            onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+            placeholder="Select category"
+            options={[
+              { value: '', label: 'Select category' },
+              ...(categories?.data || []).map((c) => ({ value: c.id, label: c.name })),
+            ]}
+            required
+          />
+          <Select
+            label="Status"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+            options={STATUS_OPTIONS}
+            required
+          />
+          <Select
+            label="Unit"
+            value={form.unit}
+            onChange={(e) => setForm({ ...form, unit: e.target.value })}
+            placeholder="Select unit"
+            options={UNIT_OPTIONS}
+          />
+          <Input
+            label="Price (₹)"
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            required
+          />
+          <Input
+            label="Old price (₹)"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="MRP / before discount"
+            value={form.oldPrice}
+            onChange={(e) => setForm({ ...form, oldPrice: e.target.value })}
+          />
+          <Input
+            label="Offer price (₹)"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Sale price customers pay"
+            value={form.offerPrice}
+            onChange={(e) => setForm({ ...form, offerPrice: e.target.value })}
+          />
+          <Input
+            label="Stock"
+            type="number"
+            min="0"
+            value={form.stock}
+            onChange={(e) => setForm((prev) => handleStockChange(prev, e.target.value))}
+            required
+          />
+          <Input
+            className="sm:col-span-2"
+            label="Description"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.isTodaySpecial}
+              onChange={(e) => setForm({ ...form, isTodaySpecial: e.target.checked })}
+              className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
             />
-            <Input className="sm:col-span-2" label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            <div className="flex gap-3 sm:col-span-2">
-              <Button type="submit" loading={saveMutation.isPending}>{editId ? 'Save Changes' : 'Create Product'}</Button>
-              <Button variant="ghost" type="button" onClick={closeForm}>Cancel</Button>
-            </div>
-          </form>
-        </div>
-      )}
+            <span>
+              <span className="block text-sm font-medium text-slate-900">Today&apos;s special sale</span>
+              <span className="block text-xs text-slate-500">Show this product in today&apos;s specials on the storefront</span>
+            </span>
+          </label>
+          {saveMutation.error && (
+            <p className="sm:col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              {saveMutation.error.message}
+            </p>
+          )}
+          <div className="flex gap-3 sm:col-span-2">
+            <Button type="submit" loading={saveMutation.isPending}>{editId ? 'Save Changes' : 'Create Product'}</Button>
+            <Button variant="ghost" type="button" onClick={closeForm}>Cancel</Button>
+          </div>
+        </form>
+      </Modal>
 
       {isLoading ? (
         <div className="admin-card h-48 animate-pulse" />
@@ -111,7 +257,7 @@ export default function AdminProducts() {
           title="No products yet"
           description="Add your first product to start selling on FreshBasket."
           action={
-            <Button onClick={() => setShowForm(true)}>
+            <Button onClick={openCreateModal}>
               <Plus className="h-4 w-4" /> Add Product
             </Button>
           }
@@ -124,6 +270,7 @@ export default function AdminProducts() {
                 <tr>
                   <th>Product</th>
                   <th>Category</th>
+                  <th>Unit</th>
                   <th>Price</th>
                   <th>Stock</th>
                   <th>Status</th>
@@ -147,20 +294,28 @@ export default function AdminProducts() {
                       </div>
                     </td>
                     <td className="text-slate-500">{p.category?.name || '—'}</td>
-                    <td className="font-semibold text-slate-900">{formatCurrency(p.price)}</td>
+                    <td className="text-slate-500">{p.unit || '—'}</td>
+                    <td>
+                      <ProductPriceDisplay product={p} size="sm" />
+                    </td>
                     <td>
                       <span className={p.stock === 0 ? 'font-medium text-red-600' : ''}>{p.stock}</span>
                     </td>
                     <td>
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        p.status === 'ACTIVE' ? 'bg-primary-50 text-primary-700' : 'bg-slate-100 text-slate-600'
+                        p.status === 'ACTIVE'
+                          ? 'bg-primary-50 text-primary-700'
+                          : p.status === 'INACTIVE'
+                            ? 'bg-slate-100 text-slate-600'
+                            : 'bg-red-50 text-red-600'
                       }`}>
-                        {p.status}
+                        {p.status === 'OUT_OF_STOCK' ? 'Out of Stock' : p.status === 'INACTIVE' ? 'Inactive' : 'Active'}
                       </span>
                     </td>
                     <td>
                       <div className="flex justify-end gap-1">
                         <button
+                          type="button"
                           onClick={() => handleEdit(p)}
                           className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-primary-600"
                           aria-label={`Edit ${p.name}`}
@@ -168,7 +323,10 @@ export default function AdminProducts() {
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => deleteMutation.mutate(p.id)}
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Delete "${p.name}"?`)) deleteMutation.mutate(p.id);
+                          }}
                           className="rounded-lg p-2 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
                           aria-label={`Delete ${p.name}`}
                         >

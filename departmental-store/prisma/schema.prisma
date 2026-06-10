@@ -79,15 +79,18 @@ model Category {
 }
 
 model Product {
-  id          String        @id @default(cuid()) @db.VarChar(30)
-  name        String        @db.VarChar(200)
-  description String?       @db.Text
-  price       Decimal       @db.Decimal(10, 2)
-  stock       Int           @default(0)
-  image       String?       @db.VarChar(500)
-  categoryId  String        @db.VarChar(30)
-  status      ProductStatus @default(ACTIVE)
-  isTodaySpecial Boolean    @default(false)
+  id             String        @id @default(cuid()) @db.VarChar(30)
+  name           String        @db.VarChar(200)
+  description    String?       @db.Text
+  unit           String?       @db.VarChar(20)
+  price          Decimal       @db.Decimal(10, 2)
+  oldPrice       Decimal?      @db.Decimal(10, 2)
+  offerPrice     Decimal?      @db.Decimal(10, 2)
+  stock          Int           @default(0)
+  image          String?       @db.VarChar(500)
+  categoryId     String        @db.VarChar(30)
+  status         ProductStatus @default(ACTIVE)
+  isTodaySpecial Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

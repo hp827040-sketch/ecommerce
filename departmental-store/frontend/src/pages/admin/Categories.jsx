@@ -4,6 +4,7 @@ import { categoryService } from '../../services/categoryService';
 import { PageHeader } from '../../components/admin/PageHeader';
 import { EmptyState } from '../../components/admin/EmptyState';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { Input, Select } from '../../components/ui/Input';
 import { Plus, Pencil, Trash2, Tags } from 'lucide-react';
 
@@ -13,6 +14,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AdminCategories() {
+  const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [name, setName] = useState('');
   const [status, setStatus] = useState('ACTIVE');
@@ -27,6 +29,14 @@ export default function AdminCategories() {
     setEditId(null);
     setName('');
     setStatus('ACTIVE');
+    setModalOpen(false);
+  };
+
+  const openCreateModal = () => {
+    setEditId(null);
+    setName('');
+    setStatus('ACTIVE');
+    setModalOpen(true);
   };
 
   const saveMutation = useMutation({
@@ -51,6 +61,7 @@ export default function AdminCategories() {
     setEditId(category.id);
     setName(category.name);
     setStatus(category.status || 'ACTIVE');
+    setModalOpen(true);
   };
 
   const categories = data?.data || [];
@@ -60,9 +71,20 @@ export default function AdminCategories() {
       <PageHeader
         title="Categories"
         description="Organise products into categories for easier browsing."
+        action={
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add Category
+          </Button>
+        }
       />
 
-      <div className="admin-card p-5">
+      <Modal
+        open={modalOpen}
+        onClose={resetForm}
+        title={editId ? 'Edit Category' : 'New Category'}
+        size="sm"
+      >
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -71,43 +93,38 @@ export default function AdminCategories() {
             if (editId) payload.status = status;
             saveMutation.mutate(payload);
           }}
-          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          className="space-y-4"
         >
           <Input
-            className="flex-1"
-            label={editId ? 'Rename category' : 'New category'}
+            label={editId ? 'Category name' : 'New category'}
             placeholder="e.g. Vegetables, Fruits, Dairy"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
           />
           {editId && (
             <Select
-              className="sm:w-40"
               label="Status"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               options={STATUS_OPTIONS}
             />
           )}
-          <div className="flex gap-2 sm:mb-0">
+          {saveMutation.error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              {saveMutation.error.message}
+            </p>
+          )}
+          <div className="flex gap-3 pt-2">
             <Button type="submit" loading={saveMutation.isPending}>
-              {editId ? (
-                <>Save Changes</>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  Add Category
-                </>
-              )}
+              {editId ? 'Save Changes' : 'Add Category'}
             </Button>
-            {editId && (
-              <Button type="button" variant="ghost" onClick={resetForm}>
-                Cancel
-              </Button>
-            )}
+            <Button type="button" variant="ghost" onClick={resetForm}>
+              Cancel
+            </Button>
           </div>
         </form>
-      </div>
+      </Modal>
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -120,16 +137,16 @@ export default function AdminCategories() {
           icon={Tags}
           title="No categories"
           description="Create categories to group your products."
+          action={
+            <Button onClick={openCreateModal}>
+              <Plus className="h-4 w-4" /> Add Category
+            </Button>
+          }
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categories.map((c) => (
-            <div
-              key={c.id}
-              className={`admin-card group p-5 transition hover:shadow-md ${
-                editId === c.id ? 'ring-2 ring-primary-500 ring-offset-2' : ''
-              }`}
-            >
+            <div key={c.id} className="admin-card group p-5 transition hover:shadow-md">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
@@ -145,8 +162,8 @@ export default function AdminCategories() {
                     type="button"
                     onClick={() => handleEdit(c)}
                     className="rounded-lg p-2 text-slate-400 hover:bg-primary-50 hover:text-primary-600"
-                    aria-label={`Rename ${c.name}`}
-                    title="Rename"
+                    aria-label={`Edit ${c.name}`}
+                    title="Edit"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>

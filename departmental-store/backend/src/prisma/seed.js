@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
+import { deriveProductStatus } from '../utils/productStatus.js';
 
 const prisma = new PrismaClient();
 
@@ -50,38 +51,71 @@ async function main() {
 
   const vegCategory = categories.find((c) => c.name === 'Vegetables');
 
-  await prisma.product.createMany({
-    data: [
-      {
-        name: 'Fresh Tomatoes',
-        description: 'Farm-fresh red tomatoes',
-        price: 40,
-        stock: 100,
-        categoryId: vegCategory.id,
-        status: 'ACTIVE',
-        isTodaySpecial: true,
-      },
-      {
-        name: 'Green Spinach',
-        description: 'Organic leafy spinach',
-        price: 30,
-        stock: 80,
-        categoryId: vegCategory.id,
-        status: 'ACTIVE',
-        isTodaySpecial: true,
-      },
-      {
-        name: 'Onions (1kg)',
-        description: 'Premium quality onions',
-        price: 35,
-        stock: 150,
-        categoryId: vegCategory.id,
-        status: 'ACTIVE',
-        isTodaySpecial: false,
-      },
-    ],
-    skipDuplicates: true,
-  });
+  const productSeeds = [
+    {
+      name: 'Fresh Tomatoes',
+      description: 'Farm-fresh red tomatoes',
+      unit: 'kg',
+      price: 45,
+      oldPrice: 55,
+      offerPrice: 40,
+      stock: 100,
+      categoryId: vegCategory.id,
+      isTodaySpecial: true,
+    },
+    {
+      name: 'Green Spinach',
+      description: 'Organic leafy spinach',
+      unit: 'bunch',
+      price: 35,
+      oldPrice: 40,
+      offerPrice: 30,
+      stock: 80,
+      categoryId: vegCategory.id,
+      isTodaySpecial: true,
+    },
+    {
+      name: 'Onions',
+      description: 'Premium quality onions',
+      unit: 'kg',
+      price: 35,
+      stock: 150,
+      categoryId: vegCategory.id,
+      isTodaySpecial: false,
+    },
+  ];
+
+  for (const seed of productSeeds) {
+    const existing = await prisma.product.findFirst({ where: { name: seed.name } });
+    if (existing) {
+      await prisma.product.update({
+        where: { id: existing.id },
+        data: {
+          ...seed,
+          status: deriveProductStatus(existing.stock, existing.status),
+        },
+      });
+    } else {
+      await prisma.product.create({
+        data: {
+          ...seed,
+          status: deriveProductStatus(seed.stock, 'ACTIVE'),
+        },
+      });
+    }
+  }
+
+  const allProducts = await prisma.product.findMany();
+  for (const product of allProducts) {
+    const status = deriveProductStatus(product.stock, product.status);
+    const unit = product.unit ?? (product.name.includes('(1kg)') ? 'kg' : null);
+    if (status !== product.status || unit !== product.unit) {
+      await prisma.product.update({
+        where: { id: product.id },
+        data: { status, ...(unit && { unit }) },
+      });
+    }
+  }
 
   console.log('✅ Seed completed');
   console.log('Admin:    ', admin.email, '| Password: admin123');

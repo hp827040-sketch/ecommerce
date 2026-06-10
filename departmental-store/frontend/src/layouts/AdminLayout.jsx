@@ -10,8 +10,6 @@ import {
   ExternalLink,
   Bell,
   ShieldCheck,
-  PanelLeftClose,
-  PanelLeft,
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -85,21 +83,17 @@ export const AdminLayout = ({ navGroups, title }) => {
         <div className="relative flex h-full flex-col overflow-hidden">
           <div className="admin-sidebar-accent pointer-events-none absolute inset-y-0 left-0 w-1" aria-hidden="true" />
 
-          {/* Brand */}
+          {/* Brand + collapse */}
           <div
-            className={`relative shrink-0 border-b border-slate-200/80 ${
-              sidebarCollapsed ? 'flex justify-center px-2 py-4' : 'p-5'
+            className={`relative flex shrink-0 items-center border-b border-slate-200/80 ${
+              sidebarCollapsed ? 'justify-center px-2 py-3' : 'justify-between gap-2 p-4'
             }`}
           >
-            <Link
-              to="/"
-              className={`group ${sidebarCollapsed ? 'flex' : 'flex items-center gap-3'}`}
-              title={sidebarCollapsed ? 'FreshBasket Admin' : undefined}
-            >
-              <div className="rounded-2xl bg-gradient-to-br from-primary-500 via-primary-400 to-emerald-400 p-2.5 shadow-lg shadow-primary-500/30 transition group-hover:scale-105">
-                <Leaf className="h-5 w-5 text-white" aria-hidden="true" />
-              </div>
-              {!sidebarCollapsed && (
+            {!sidebarCollapsed && (
+              <Link to="/" className="group flex min-w-0 flex-1 items-center gap-3">
+                <div className="rounded-2xl bg-gradient-to-br from-primary-500 via-primary-400 to-emerald-400 p-2.5 shadow-lg shadow-primary-500/30 transition group-hover:scale-105">
+                  <Leaf className="h-5 w-5 text-white" aria-hidden="true" />
+                </div>
                 <div className="min-w-0">
                   <span className="admin-display block truncate text-lg font-bold leading-tight text-slate-900">
                     Fresh<span className="text-primary-600">Basket</span>
@@ -109,26 +103,21 @@ export const AdminLayout = ({ navGroups, title }) => {
                     Admin Panel
                   </span>
                 </div>
-              )}
-            </Link>
-          </div>
-
-          {/* Collapse toggle — desktop */}
-          <div className={`hidden shrink-0 border-b border-slate-200/80 lg:block ${sidebarCollapsed ? 'px-2 py-2' : 'px-3 py-2'}`}>
+              </Link>
+            )}
             <button
               type="button"
               onClick={toggleSidebarCollapsed}
-              className="admin-sidebar-toggle w-full"
+              className={`admin-sidebar-toggle-icon hidden lg:flex ${
+                sidebarCollapsed ? 'admin-sidebar-toggle-icon-collapsed' : ''
+              }`}
               aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {sidebarCollapsed ? (
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
               ) : (
-                <>
-                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                  <span>Collapse</span>
-                </>
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               )}
             </button>
           </div>
@@ -267,18 +256,6 @@ export const AdminLayout = ({ navGroups, title }) => {
                 aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
               >
                 {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
-              <button
-                type="button"
-                className="hidden rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 lg:flex"
-                onClick={toggleSidebarCollapsed}
-                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              >
-                {sidebarCollapsed ? (
-                  <PanelLeft className="h-5 w-5" aria-hidden="true" />
-                ) : (
-                  <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
-                )}
               </button>
               <div>
                 <nav className="mb-0.5 flex items-center gap-1 text-xs text-slate-500" aria-label="Breadcrumb">

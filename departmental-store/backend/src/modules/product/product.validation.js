@@ -4,7 +4,10 @@ export const createProductSchema = z.object({
   body: z.object({
     name: z.string().min(2),
     description: z.string().optional(),
+    unit: z.string().max(20).optional().nullable(),
     price: z.coerce.number().positive(),
+    oldPrice: z.coerce.number().positive().optional().nullable(),
+    offerPrice: z.coerce.number().positive().optional().nullable(),
     stock: z.coerce.number().int().min(0),
     categoryId: z.string(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'OUT_OF_STOCK']).optional(),
@@ -17,7 +20,10 @@ export const updateProductSchema = z.object({
   body: z.object({
     name: z.string().min(2).optional(),
     description: z.string().optional(),
+    unit: z.string().max(20).optional().nullable(),
     price: z.coerce.number().positive().optional(),
+    oldPrice: z.coerce.number().positive().optional().nullable(),
+    offerPrice: z.coerce.number().positive().optional().nullable(),
     stock: z.coerce.number().int().min(0).optional(),
     categoryId: z.string().optional(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'OUT_OF_STOCK']).optional(),

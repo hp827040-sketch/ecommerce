@@ -4,6 +4,7 @@ import { cartService } from '../../services/cartService';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { formatCurrency } from '../../utils/formatters';
+import { getSellingPrice } from '../../utils/productPrice';
 import { Minus, Plus, Trash2, ShoppingCart } from 'lucide-react';
 
 export default function CustomerCart() {
@@ -61,9 +62,9 @@ export default function CustomerCart() {
                     )}
                     <div>
                       <h3 className="font-semibold text-slate-900">{item.product.name}</h3>
-                      <p className="text-sm text-primary-600">{formatCurrency(item.product.price)} each</p>
+                      <p className="text-sm text-primary-600">{formatCurrency(getSellingPrice(item.product))} each</p>
                       <p className="text-sm font-medium text-slate-700">
-                        {formatCurrency(Number(item.product.price) * item.quantity)}
+                        {formatCurrency(getSellingPrice(item.product) * item.quantity)}
                       </p>
                     </div>
                   </div>

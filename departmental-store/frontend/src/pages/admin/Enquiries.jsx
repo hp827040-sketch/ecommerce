@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { enquiryService } from '../../services/enquiryService';
-import { Card } from '../../components/ui/Card';
+import { PageHeader } from '../../components/admin/PageHeader';
+import { EmptyState } from '../../components/admin/EmptyState';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { Input, Select } from '../../components/ui/Input';
 import { formatDate } from '../../utils/formatters';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, MessageSquare } from 'lucide-react';
 
 const emptyForm = { name: '', email: '', phone: '', message: '', source: 'CONTACT' };
 const sources = [
@@ -15,7 +17,7 @@ const sources = [
 ];
 
 export default function AdminEnquiries() {
-  const [showForm, setShowForm] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const queryClient = useQueryClient();
@@ -28,7 +30,13 @@ export default function AdminEnquiries() {
   const resetForm = () => {
     setForm(emptyForm);
     setEditId(null);
-    setShowForm(false);
+    setModalOpen(false);
+  };
+
+  const openCreateModal = () => {
+    setEditId(null);
+    setForm(emptyForm);
+    setModalOpen(true);
   };
 
   const saveMutation = useMutation({
@@ -62,96 +70,127 @@ export default function AdminEnquiries() {
       message: enquiry.message,
       source: enquiry.source,
     });
-    setShowForm(true);
+    setModalOpen(true);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Enquiry Management</h2>
-        <Button onClick={() => { resetForm(); setShowForm(true); }}>
-          <Plus className="h-4 w-4" /> Add Enquiry
-        </Button>
-      </div>
+      <PageHeader
+        title="Enquiries"
+        description="Review and respond to customer messages from your store."
+        action={
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add Enquiry
+          </Button>
+        }
+      />
 
-      {showForm && (
-        <Card>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveMutation.mutate(form);
-            }}
-            className="grid gap-4 sm:grid-cols-2"
-          >
-            <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-            <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-            <Input label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            <Select
-              label="Source"
-              value={form.source}
-              onChange={(e) => setForm({ ...form, source: e.target.value })}
-              options={sources}
-            />
-            <Input
-              className="sm:col-span-2"
-              label="Message"
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              required
-            />
-            <div className="flex gap-3 sm:col-span-2">
-              <Button type="submit" loading={saveMutation.isPending}>{editId ? 'Update' : 'Create'}</Button>
-              <Button variant="ghost" type="button" onClick={resetForm}>Cancel</Button>
-            </div>
-          </form>
-        </Card>
-      )}
+      <Modal
+        open={modalOpen}
+        onClose={resetForm}
+        title={editId ? 'Edit Enquiry' : 'New Enquiry'}
+        size="md"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveMutation.mutate(form);
+          }}
+          className="grid gap-4 sm:grid-cols-2"
+        >
+          <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+          <Input label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <Select
+            label="Source"
+            value={form.source}
+            onChange={(e) => setForm({ ...form, source: e.target.value })}
+            options={sources}
+          />
+          <Input
+            className="sm:col-span-2"
+            label="Message"
+            value={form.message}
+            onChange={(e) => setForm({ ...form, message: e.target.value })}
+            required
+          />
+          {saveMutation.error && (
+            <p className="sm:col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              {saveMutation.error.message}
+            </p>
+          )}
+          <div className="flex gap-3 sm:col-span-2">
+            <Button type="submit" loading={saveMutation.isPending}>{editId ? 'Save Changes' : 'Create Enquiry'}</Button>
+            <Button variant="ghost" type="button" onClick={resetForm}>Cancel</Button>
+          </div>
+        </form>
+      </Modal>
 
       {isLoading ? (
-        <div className="glass-card h-48 animate-pulse" />
+        <div className="admin-card h-48 animate-pulse" />
       ) : enquiries.length === 0 ? (
-        <Card><p className="text-slate-400">No enquiries yet.</p></Card>
+        <EmptyState
+          icon={MessageSquare}
+          title="No enquiries yet"
+          description="Customer messages from your store will appear here."
+          action={
+            <Button onClick={openCreateModal}>
+              <Plus className="h-4 w-4" /> Add Enquiry
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-4">
           {enquiries.map((e) => (
-            <Card key={e.id} className={!e.isRead ? 'border-primary-500/30' : ''}>
+            <div
+              key={e.id}
+              className={`admin-card p-5 ${!e.isRead ? 'ring-2 ring-primary-200' : ''}`}
+            >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">{e.name}</h3>
+                    <h3 className="font-semibold text-slate-900">{e.name}</h3>
                     {!e.isRead && (
-                      <span className="rounded-full bg-primary-500/20 px-2 py-0.5 text-xs text-primary-300">New</span>
+                      <span className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">New</span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-400">{e.email} · {e.source}</p>
-                  {e.phone && <p className="text-sm text-slate-400">{e.phone}</p>}
-                  <p className="mt-2 text-sm">{e.message}</p>
-                  <p className="mt-2 text-xs text-slate-500">{formatDate(e.createdAt)}</p>
+                  <p className="text-sm text-slate-500">{e.email} · {e.source}</p>
+                  {e.phone && <p className="text-sm text-slate-500">{e.phone}</p>}
+                  <p className="mt-2 text-sm text-slate-700">{e.message}</p>
+                  <p className="mt-2 text-xs text-slate-400">{formatDate(e.createdAt)}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEdit(e)} className="rounded-lg bg-white/5 p-2" title="Edit">
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(e)}
+                      className="rounded-lg p-2 text-slate-400 hover:bg-primary-50 hover:text-primary-600"
+                      title="Edit"
+                    >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         if (window.confirm('Delete this enquiry?')) deleteMutation.mutate(e.id);
                       }}
-                      className="rounded-lg bg-red-500/10 p-2 text-red-400"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
                       title="Delete"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                   <button
+                    type="button"
                     onClick={() => toggleRead.mutate({ id: e.id, isRead: !e.isRead })}
-                    className="text-xs text-primary-400 hover:underline"
+                    className="text-xs font-medium text-primary-600 hover:underline"
                   >
                     Mark as {e.isRead ? 'unread' : 'read'}
                   </button>
                 </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}

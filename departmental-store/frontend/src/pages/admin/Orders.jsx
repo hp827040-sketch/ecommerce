@@ -7,9 +7,11 @@ import { PageHeader } from '../../components/admin/PageHeader';
 import { StatusBadge } from '../../components/admin/StatusBadge';
 import { EmptyState } from '../../components/admin/EmptyState';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { formatCurrency, formatDate, ORDER_STATUS_LABELS } from '../../utils/formatters';
-import { Plus, Pencil, Trash2, ClipboardList, X } from 'lucide-react';
+import { getSellingPrice } from '../../utils/productPrice';
+import { Plus, Pencil, Trash2, ClipboardList } from 'lucide-react';
 
 const STATUSES = ['PENDING', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
 const PAYMENT_OPTIONS = [
@@ -38,7 +40,7 @@ const emptyEditForm = {
 };
 
 export default function AdminOrders() {
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [modalMode, setModalMode] = useState(null);
   const [editId, setEditId] = useState(null);
   const [createForm, setCreateForm] = useState(emptyCreateForm);
   const [editForm, setEditForm] = useState(emptyEditForm);
@@ -52,23 +54,27 @@ export default function AdminOrders() {
   const { data: customersData } = useQuery({
     queryKey: ['admin-customers'],
     queryFn: () => adminService.getCustomers(),
-    enabled: showCreateForm,
+    enabled: modalMode === 'create',
   });
 
   const { data: productsData } = useQuery({
-    queryKey: ['admin-products'],
-    queryFn: () => productService.getAll(),
-    enabled: showCreateForm,
+    queryKey: ['admin-products', 'orderable'],
+    queryFn: () => productService.getAll({ status: 'ACTIVE' }),
+    enabled: modalMode === 'create',
   });
 
-  const resetCreateForm = () => {
+  const closeModal = () => {
+    setModalMode(null);
+    setEditId(null);
     setCreateForm(emptyCreateForm);
-    setShowCreateForm(false);
+    setEditForm(emptyEditForm);
   };
 
-  const resetEditForm = () => {
+  const openCreateModal = () => {
     setEditId(null);
+    setCreateForm(emptyCreateForm);
     setEditForm(emptyEditForm);
+    setModalMode('create');
   };
 
   const createMutation = useMutation({
@@ -76,7 +82,7 @@ export default function AdminOrders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      resetCreateForm();
+      closeModal();
     },
   });
 
@@ -85,15 +91,7 @@ export default function AdminOrders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      resetEditForm();
-    },
-  });
-
-  const updateStatus = useMutation({
-    mutationFn: ({ id, status }) => orderService.updateStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      closeModal();
     },
   });
 
@@ -102,24 +100,27 @@ export default function AdminOrders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      if (editId) resetEditForm();
+      closeModal();
     },
   });
 
   const orders = data?.data || [];
   const customers = customersData?.data || [];
-  const products = productsData?.data || [];
+  const orderableProducts = useMemo(
+    () => (productsData?.data || []).filter((p) => p.status === 'ACTIVE' && p.stock > 0),
+    [productsData]
+  );
 
   const productMap = useMemo(
-    () => new Map(products.map((p) => [p.id, p])),
-    [products]
+    () => new Map(orderableProducts.map((p) => [p.id, p])),
+    [orderableProducts]
   );
 
   const createTotal = useMemo(() => {
     return createForm.items.reduce((sum, item) => {
       const product = productMap.get(item.productId);
       if (!product || !item.quantity) return sum;
-      return sum + Number(product.price) * Number(item.quantity);
+      return sum + getSellingPrice(product) * Number(item.quantity);
     }, 0);
   }, [createForm.items, productMap]);
 
@@ -143,7 +144,7 @@ export default function AdminOrders() {
       paymentMethod: order.paymentMethod || 'COD',
       status: order.status || 'PENDING',
     });
-    setShowCreateForm(false);
+    setModalMode('edit');
   };
 
   const updateCreateItem = (index, field, value) => {
@@ -211,203 +212,186 @@ export default function AdminOrders() {
         title="Orders"
         description="Create, track, and manage customer orders from pending to delivered."
         action={
-          <Button onClick={() => { resetEditForm(); setShowCreateForm(true); }}>
+          <Button onClick={openCreateModal}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             New Order
           </Button>
         }
       />
 
-      {showCreateForm && (
-        <div className="admin-card p-6">
-          <div className="mb-5 flex items-center justify-between">
-            <h3 className="admin-display font-semibold text-slate-900">Create Order</h3>
-            <button
-              type="button"
-              onClick={resetCreateForm}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              aria-label="Close form"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <form onSubmit={handleCreateSubmit} className="space-y-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select
-                label="Customer"
-                value={createForm.userId}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-                options={[
-                  { value: '', label: 'Select customer' },
-                  ...customers.map((c) => ({ value: c.id, label: `${c.name} (${c.email})` })),
-                ]}
-                required
-              />
-              <Input
-                label="Customer name"
-                value={createForm.name}
-                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                required
-              />
-              <Input
-                label="Phone"
-                value={createForm.phone}
-                onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-                required
-              />
-              <Select
-                label="Payment method"
-                value={createForm.paymentMethod}
-                onChange={(e) => setCreateForm({ ...createForm, paymentMethod: e.target.value })}
-                options={PAYMENT_OPTIONS}
-              />
-              <Select
-                label="Status"
-                value={createForm.status}
-                onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
-                options={STATUSES.map((s) => ({ value: s, label: ORDER_STATUS_LABELS[s] }))}
-              />
-            </div>
-
-            <Textarea
-              label="Delivery address"
-              value={createForm.address}
-              onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+      <Modal
+        open={modalMode === 'create'}
+        onClose={closeModal}
+        title="Create Order"
+        size="lg"
+      >
+        <form onSubmit={handleCreateSubmit} className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Customer"
+              value={createForm.userId}
+              onChange={(e) => handleCustomerChange(e.target.value)}
+              options={[
+                { value: '', label: 'Select customer' },
+                ...customers.map((c) => ({ value: c.id, label: `${c.name} (${c.email})` })),
+              ]}
               required
             />
-            <Textarea
-              label="Notes (optional)"
-              value={createForm.notes}
-              onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+            <Input
+              label="Customer name"
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              required
             />
-
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-700">Order items</p>
-                <Button type="button" variant="ghost" onClick={addCreateItem}>
-                  <Plus className="h-4 w-4" />
-                  Add item
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {createForm.items.map((item, index) => (
-                  <div key={index} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <Select
-                      className="flex-1"
-                      label={index === 0 ? 'Product' : undefined}
-                      value={item.productId}
-                      onChange={(e) => updateCreateItem(index, 'productId', e.target.value)}
-                      options={[
-                        { value: '', label: 'Select product' },
-                        ...products.map((p) => ({
-                          value: p.id,
-                          label: `${p.name} — ${formatCurrency(p.price)} (${p.stock} in stock)`,
-                        })),
-                      ]}
-                      required
-                    />
-                    <Input
-                      className="sm:w-28"
-                      label={index === 0 ? 'Qty' : undefined}
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateCreateItem(index, 'quantity', e.target.value)}
-                      required
-                    />
-                    {createForm.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeCreateItem(index)}
-                        className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 sm:mb-0.5"
-                        aria-label="Remove item"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-sm font-semibold text-slate-900">
-                Order total: {formatCurrency(createTotal)}
-              </p>
-            </div>
-
-            {createMutation.error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-                {createMutation.error.message}
-              </p>
-            )}
-
-            <div className="flex gap-3">
-              <Button type="submit" loading={createMutation.isPending}>Create Order</Button>
-              <Button type="button" variant="ghost" onClick={resetCreateForm}>Cancel</Button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {editId && (
-        <div className="admin-card p-6 ring-2 ring-primary-500 ring-offset-2">
-          <div className="mb-5 flex items-center justify-between">
-            <h3 className="admin-display font-semibold text-slate-900">Edit Order</h3>
-            <button
-              type="button"
-              onClick={resetEditForm}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              aria-label="Close edit form"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <form onSubmit={handleEditSubmit} className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Phone"
-              value={editForm.phone}
-              onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+              value={createForm.phone}
+              onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
               required
             />
             <Select
               label="Payment method"
-              value={editForm.paymentMethod}
-              onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value })}
+              value={createForm.paymentMethod}
+              onChange={(e) => setCreateForm({ ...createForm, paymentMethod: e.target.value })}
               options={PAYMENT_OPTIONS}
             />
             <Select
               label="Status"
-              value={editForm.status}
-              onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+              value={createForm.status}
+              onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
               options={STATUSES.map((s) => ({ value: s, label: ORDER_STATUS_LABELS[s] }))}
             />
-            <Textarea
-              className="sm:col-span-2"
-              label="Delivery address"
-              value={editForm.address}
-              onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-              required
-            />
-            <Textarea
-              className="sm:col-span-2"
-              label="Notes (optional)"
-              value={editForm.notes}
-              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-            />
+          </div>
 
-            {updateMutation.error && (
-              <p className="sm:col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-                {updateMutation.error.message}
-              </p>
-            )}
+          <Textarea
+            label="Delivery address"
+            value={createForm.address}
+            onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
+            required
+          />
+          <Textarea
+            label="Notes (optional)"
+            value={createForm.notes}
+            onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+          />
 
-            <div className="flex gap-3 sm:col-span-2">
-              <Button type="submit" loading={updateMutation.isPending}>Save Changes</Button>
-              <Button type="button" variant="ghost" onClick={resetEditForm}>Cancel</Button>
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-700">Order items</p>
+              <Button type="button" variant="ghost" onClick={addCreateItem}>
+                <Plus className="h-4 w-4" />
+                Add item
+              </Button>
             </div>
-          </form>
-        </div>
-      )}
+            <div className="space-y-3">
+              {createForm.items.map((item, index) => (
+                <div key={index} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <Select
+                    className="flex-1"
+                    label={index === 0 ? 'Product' : undefined}
+                    value={item.productId}
+                    onChange={(e) => updateCreateItem(index, 'productId', e.target.value)}
+                    options={[
+                      { value: '', label: 'Select product' },
+                      ...orderableProducts.map((p) => ({
+                        value: p.id,
+                        label: `${p.name} — ${formatCurrency(getSellingPrice(p))}${p.unit ? ` / ${p.unit}` : ''} (${p.stock} in stock)`,
+                      })),
+                    ]}
+                    required
+                  />
+                  <Input
+                    className="sm:w-28"
+                    label={index === 0 ? 'Qty' : undefined}
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) => updateCreateItem(index, 'quantity', e.target.value)}
+                    required
+                  />
+                  {createForm.items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCreateItem(index)}
+                      className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 sm:mb-0.5"
+                      aria-label="Remove item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-sm font-semibold text-slate-900">
+              Order total: {formatCurrency(createTotal)}
+            </p>
+          </div>
+
+          {createMutation.error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              {createMutation.error.message}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <Button type="submit" loading={createMutation.isPending}>Create Order</Button>
+            <Button type="button" variant="ghost" onClick={closeModal}>Cancel</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={modalMode === 'edit'}
+        onClose={closeModal}
+        title="Edit Order"
+        size="md"
+      >
+        <form onSubmit={handleEditSubmit} className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Phone"
+            value={editForm.phone}
+            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+            required
+          />
+          <Select
+            label="Payment method"
+            value={editForm.paymentMethod}
+            onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value })}
+            options={PAYMENT_OPTIONS}
+          />
+          <Select
+            className="sm:col-span-2"
+            label="Status"
+            value={editForm.status}
+            onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+            options={STATUSES.map((s) => ({ value: s, label: ORDER_STATUS_LABELS[s] }))}
+          />
+          <Textarea
+            className="sm:col-span-2"
+            label="Delivery address"
+            value={editForm.address}
+            onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+            required
+          />
+          <Textarea
+            className="sm:col-span-2"
+            label="Notes (optional)"
+            value={editForm.notes}
+            onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+          />
+
+          {updateMutation.error && (
+            <p className="sm:col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              {updateMutation.error.message}
+            </p>
+          )}
+
+          <div className="flex gap-3 sm:col-span-2">
+            <Button type="submit" loading={updateMutation.isPending}>Save Changes</Button>
+            <Button type="button" variant="ghost" onClick={closeModal}>Cancel</Button>
+          </div>
+        </form>
+      </Modal>
 
       {isLoading ? (
         <div className="admin-card h-48 animate-pulse" />
@@ -417,7 +401,7 @@ export default function AdminOrders() {
           title="No orders yet"
           description="Create a new order or wait for customers to place orders."
           action={
-            <Button onClick={() => setShowCreateForm(true)}>
+            <Button onClick={openCreateModal}>
               <Plus className="h-4 w-4" /> New Order
             </Button>
           }
@@ -425,12 +409,7 @@ export default function AdminOrders() {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <div
-              key={order.id}
-              className={`admin-card overflow-hidden ${
-                editId === order.id ? 'ring-2 ring-primary-500 ring-offset-2' : ''
-              }`}
-            >
+            <div key={order.id} className="admin-card overflow-hidden">
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 p-5">
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
@@ -471,12 +450,6 @@ export default function AdminOrders() {
                     </button>
                   </div>
                   <p className="admin-display text-xl font-bold text-slate-900">{formatCurrency(order.total)}</p>
-                  <Select
-                    className="w-48"
-                    value={order.status}
-                    onChange={(e) => updateStatus.mutate({ id: order.id, status: e.target.value })}
-                    options={STATUSES.map((s) => ({ value: s, label: ORDER_STATUS_LABELS[s] }))}
-                  />
                 </div>
               </div>
               <div className="bg-slate-50/50 px-5 py-3">
