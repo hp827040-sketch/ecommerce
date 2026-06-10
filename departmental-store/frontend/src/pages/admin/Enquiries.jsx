@@ -6,7 +6,7 @@ import { EmptyState } from '../../components/admin/EmptyState';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input, Select } from '../../components/ui/Input';
-import { formatDate } from '../../utils/formatters';
+import { ENQUIRY_SOURCE_LABELS, formatDate } from '../../utils/formatters';
 import { Plus, Pencil, Trash2, MessageSquare } from 'lucide-react';
 
 const emptyForm = { name: '', email: '', phone: '', message: '', source: 'CONTACT' };
@@ -141,57 +141,91 @@ export default function AdminEnquiries() {
           }
         />
       ) : (
-        <div className="space-y-4">
-          {enquiries.map((e) => (
-            <div
-              key={e.id}
-              className={`admin-card p-5 ${!e.isRead ? 'ring-2 ring-primary-200' : ''}`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900">{e.name}</h3>
-                    {!e.isRead && (
-                      <span className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">New</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-500">{e.email} · {e.source}</p>
-                  {e.phone && <p className="text-sm text-slate-500">{e.phone}</p>}
-                  <p className="mt-2 text-sm text-slate-700">{e.message}</p>
-                  <p className="mt-2 text-xs text-slate-400">{formatDate(e.createdAt)}</p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(e)}
-                      className="rounded-lg p-2 text-slate-400 hover:bg-primary-50 hover:text-primary-600"
-                      title="Edit"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.confirm('Delete this enquiry?')) deleteMutation.mutate(e.id);
-                      }}
-                      className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleRead.mutate({ id: e.id, isRead: !e.isRead })}
-                    className="text-xs font-medium text-primary-600 hover:underline"
-                  >
-                    Mark as {e.isRead ? 'unread' : 'read'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="admin-table-wrap">
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Source</th>
+                  <th>Message</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {enquiries.map((e) => (
+                  <tr key={e.id} className={!e.isRead ? 'bg-primary-50/40' : undefined}>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-slate-900">{e.name}</p>
+                        {!e.isRead && (
+                          <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
+                            New
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="text-slate-600">{e.email}</td>
+                    <td className="text-slate-500">{e.phone || '—'}</td>
+                    <td>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        e.source === 'LANDING'
+                          ? 'bg-primary-50 text-primary-700'
+                          : e.source === 'CUSTOMER'
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {ENQUIRY_SOURCE_LABELS[e.source] || e.source}
+                      </span>
+                    </td>
+                    <td className="max-w-xs">
+                      <p className="truncate text-slate-700" title={e.message}>
+                        {e.message}
+                      </p>
+                    </td>
+                    <td className="whitespace-nowrap text-slate-500">{formatDate(e.createdAt)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => toggleRead.mutate({ id: e.id, isRead: !e.isRead })}
+                        className={`text-xs font-medium hover:underline ${
+                          e.isRead ? 'text-slate-500' : 'text-primary-600'
+                        }`}
+                      >
+                        {e.isRead ? 'Read' : 'Unread'}
+                      </button>
+                    </td>
+                    <td>
+                      <div className="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(e)}
+                          className="rounded-lg p-2 text-slate-400 hover:bg-primary-50 hover:text-primary-600"
+                          title="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Delete this enquiry?')) deleteMutation.mutate(e.id);
+                          }}
+                          className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

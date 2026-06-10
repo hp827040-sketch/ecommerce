@@ -29,3 +29,9 @@ export const ORDER_STATUS_LABELS = {
   DELIVERED: 'Delivered',
   CANCELLED: 'Cancelled',
 };
+
+export const ENQUIRY_SOURCE_LABELS = {
+  LANDING: 'Landing Page',
+  CUSTOMER: 'Customer Portal',
+  CONTACT: 'Contact Form',
+};
