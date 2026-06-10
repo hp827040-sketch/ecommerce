@@ -1,0 +1,30 @@
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { env } from './config/env.js';
+import routes from './routes/index.js';
+import { notFound, errorHandler } from './middleware/error.middleware.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+
+app.use(
+  cors({
+    origin: env.frontendUrl,
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use('/uploads', express.static(path.resolve(env.uploadDir)));
+
+app.use('/api', routes);
+
+app.use(notFound);
+app.use(errorHandler);
+
+app.listen(env.port, () => {
+  console.log(`🥬 HariBasket API running on http://localhost:${env.port}`);
+});
